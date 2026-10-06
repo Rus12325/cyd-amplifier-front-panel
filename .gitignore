@@ -1,0 +1,18 @@
+# PlatformIO
+.pio/
+.vscode/
+.idea/
+
+# Python
+__pycache__/
+*.pyc
+
+# Tooling / editors
+.freebuff/
+.DS_Store
+
+# FreeCAD backups
+*.FCBak
+
+# Serial logs captured by tools/serial_log.py
+*.serial.log

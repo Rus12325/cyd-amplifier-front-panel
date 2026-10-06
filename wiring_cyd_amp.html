@@ -1,0 +1,926 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CYD ESP32-2432S028 → 5.1 — интерактивный гайд по подключению</title>
+<style>
+:root{
+  --bg:#0a0c10; --panel:#11141a; --line:#232a34; --txt:#dde3ec; --dim:#8a93a3;
+  --mono:ui-monospace,'Cascadia Code',Consolas,monospace;
+  --c24:#ff5d5d; --cgnd:#9aa7b8; --caud:#4cc2ff; --cctl:#ffb454; --cok:#3ddc84;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;color:var(--txt);font:15px/1.55 system-ui,'Segoe UI',sans-serif;
+  background:radial-gradient(1100px 600px at 85% -10%,#152230 0%,var(--bg) 55%) fixed,var(--bg)}
+header.top{position:sticky;top:0;z-index:50;display:flex;gap:16px;align-items:center;flex-wrap:wrap;
+  padding:10px 22px;background:#0d1015ee;backdrop-filter:blur(8px);border-bottom:1px solid var(--line)}
+.brand{font-weight:700;letter-spacing:.4px;white-space:nowrap}
+.brand b{color:var(--caud)}
+nav{display:flex;gap:2px;flex-wrap:wrap}
+nav a{color:var(--dim);text-decoration:none;font-size:12.5px;padding:4px 9px;border-radius:7px}
+nav a:hover{color:var(--txt);background:#1a2029}
+main{max-width:1180px;margin:0 auto;padding:26px 22px 90px}
+h1{font-size:27px;margin:10px 0 6px;letter-spacing:.2px}
+h1 .grad{background:linear-gradient(90deg,var(--caud),#7aa8ff 60%,var(--cok));-webkit-background-clip:text;background-clip:text;color:transparent}
+h2{font-size:19px;margin:0 0 12px;display:flex;align-items:center;gap:10px}
+h2 .n{flex:0 0 auto;width:26px;height:26px;border-radius:8px;background:#1a2230;color:var(--caud);
+  display:inline-flex;align-items:center;justify-content:center;font-size:13px;border:1px solid #263242}
+h3{font-size:15px;margin:18px 0 6px;color:#c7d3e0}
+.lead{color:var(--dim);max-width:82ch;margin:0 0 8px}
+.panel{background:linear-gradient(180deg,#12161d,#0e1116);border:1px solid var(--line);border-radius:14px;
+  padding:18px 20px;margin:22px 0;box-shadow:0 10px 30px #00000040}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+@media(max-width:920px){.grid2{grid-template-columns:1fr}}
+.dim{color:var(--dim)} .mono{font-family:var(--mono)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 4px}
+.chip{font:12px/1.4 var(--mono);background:#0d1117;border:1px solid var(--line);padding:5px 11px;
+  border-radius:999px;color:var(--dim);transition:.25s}
+.chip b{color:var(--txt);font-weight:600}
+.chip.on{border-color:#1f4633} .chip.on b{color:var(--cok)}
+.chip.hot{border-color:#4a2626} .chip.hot b{color:var(--c24)}
+.chip.aud{border-color:#1c3a4a} .chip.aud b{color:var(--caud)}
+.controls{display:flex;flex-wrap:wrap;gap:30px;align-items:center;margin:18px 0 4px}
+.ctl{display:flex;align-items:center;gap:14px}
+.ctl-lab{font-size:12px;color:var(--dim);line-height:1.4}
+.ctl-lab .mono{color:#aeb9c9}
+.pwr{width:66px;height:66px;border-radius:50%;border:2px solid var(--line);background:#12161d;
+  color:var(--dim);font-size:26px;cursor:pointer;transition:.25s;line-height:1}
+.pwr:hover{border-color:#3a4656}
+.pwr.on{border-color:var(--c24);color:var(--c24);
+  box-shadow:0 0 22px #ff5d5d55,inset 0 0 14px #ff5d5d22}
+.pwr:active{transform:scale(.96)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:11px;overflow:hidden;background:#0d1015}
+.seg button{background:transparent;color:var(--dim);border:0;padding:10px 18px;font:600 13px system-ui;cursor:pointer;transition:.2s}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.sel{background:#16222f;color:var(--caud)}
+.seg button:hover:not(.sel){color:var(--txt)}
+.svgbox{background:#0b0e12;border:1px solid var(--line);border-radius:12px;padding:8px;margin-top:14px}
+.svgbox .cap{font:12px var(--mono);color:#6f7a8a;padding:4px 8px 2px;letter-spacing:.4px}
+svg{display:block;width:100%;height:auto}
+svg text{user-select:none}
+/* --- SVG wiring primitives --- */
+.wire{fill:none;stroke:#39414d;stroke-width:2.6;stroke-linecap:round;stroke-linejoin:round;transition:stroke .35s}
+.on .wire{stroke:var(--hot,#3ddc84)}
+.flow{stroke-dasharray:3 10}
+.on .flow{animation:dashmove 1.1s linear infinite;filter:drop-shadow(0 0 4px var(--glow,#3ddc8433))}
+@keyframes dashmove{to{stroke-dashoffset:-52}}
+.w24{--hot:#ff5d5d;--glow:#ff5d5d66} .wgnd{--hot:#7d8b9d;--glow:#9aa7b833}
+.waud{--hot:#4cc2ff;--glow:#4cc2ff55} .wctl{--hot:#ffb454;--glow:#ffb45444}
+.blk{fill:#161a21;stroke:#2b323d;stroke-width:1.4;transition:stroke .35s,filter .35s}
+.blk2{fill:#12161c;stroke:#232a34;stroke-width:1.2}
+.on .blk{stroke:var(--hot,#3ddc84);filter:drop-shadow(0 0 6px #3ddc8433)}
+.nd{fill:#4a5563;transition:fill .3s} .on .nd{fill:var(--hot,#3ddc84)}
+.t-h{fill:#e8edf4;font-weight:600;font-size:15px;font-family:system-ui,sans-serif}
+.t-s{fill:#8a93a3;font-size:12px;font-family:system-ui,sans-serif}
+.t-m{fill:#ffd479;font-size:12px;font-family:var(--mono)}
+.t-live{fill:#8a93a3;font-size:12px;font-family:var(--mono);transition:fill .3s}
+.on .t-live{fill:var(--hot,#3ddc84)}
+.comp{fill:#0d1117;stroke:#4a5563;stroke-width:1.3;transition:.3s}
+.on .comp{stroke:var(--hot,#ff5d5d)}
+.coil{fill:#241d10;stroke:#6b5426;transition:.3s}
+.on .coil{fill:#3d2f12;stroke:var(--cctl)}
+#arm{transition:transform .28s cubic-bezier(.34,1.4,.5,1)}
+/* --- tables --- */
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin-top:8px}
+th,td{text-align:left;padding:7px 10px;border-bottom:1px solid #1c2129;vertical-align:top}
+th{color:#aeb9c9;font-weight:600;font-size:11.5px;text-transform:uppercase;letter-spacing:.5px}
+tbody tr:hover td{background:#141922}
+td.m,.m{font-family:var(--mono);color:#ffd479;white-space:nowrap}
+/* --- callouts --- */
+.callout{border-left:3px solid;padding:10px 14px;border-radius:0 10px 10px 0;margin:12px 0;font-size:13.5px}
+.warn{border-color:var(--c24);background:#24141666;color:#f0c4c4}
+.info{border-color:var(--caud);background:#0f1b2666;color:#bfdcf0}
+.ok{border-color:var(--cok);background:#0f201866;color:#c2ecd4}
+/* --- pin tags --- */
+.pintag{display:inline-block;font:600 11px var(--mono);padding:2px 8px;border-radius:6px;border:1px solid;margin:2px}
+.pfree{color:var(--cok);border-color:#1f4633;background:#0f1d16}
+.padc{color:var(--caud);border-color:#1c3a4a;background:#0e1a22}
+.ppwm{color:var(--cctl);border-color:#4a3c1d;background:#1d180d}
+/* --- checklist --- */
+.chk{display:flex;gap:11px;padding:10px 13px;border:1px solid var(--line);border-radius:11px;margin:7px 0;
+  cursor:pointer;align-items:flex-start;transition:.15s;background:#0e1218}
+.chk:hover{border-color:#334054}
+.chk input{margin-top:3px;accent-color:var(--cok);width:16px;height:16px;flex:0 0 auto}
+.chk span b{color:#e8edf4}
+.chk.done{opacity:.5}
+.chk.done .txt{text-decoration:line-through}
+.chk .tag{font-size:10.5px;color:var(--dim);font-family:var(--mono);margin-left:auto;white-space:nowrap;padding-top:2px}
+.bar{height:8px;background:#171c24;border-radius:99px;overflow:hidden;margin:12px 0 4px}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cok),var(--caud));transition:width .35s;border-radius:99px}
+.bar-lab{font-size:12px;color:var(--dim);font-family:var(--mono)}
+footer{color:#5b6472;font-size:12px;text-align:center;padding:26px 0 10px}
+.scope-lab{font:11px var(--mono);color:var(--dim);display:flex;justify-content:space-between;padding:2px 6px}
+kbd{font:11px var(--mono);background:#161d27;border:1px solid #2a313b;border-bottom-width:2px;border-radius:5px;padding:1px 6px;color:#c7d3e0}
+ul.tight{margin:6px 0;padding-left:20px}
+ul.tight li{margin:4px 0}
+#lab-info{display:none;margin-top:12px;padding:10px 14px;border:1px solid #263242;border-radius:10px;
+  background:#0f1b26;font-size:13.5px;color:#bfdcf0}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">CYD <b>→</b> 5.1 wiring&nbsp;lab</div>
+  <nav>
+    <a href="#lab">Симулятор</a><a href="#p51">5.1</a><a href="#fet">24 В</a><a href="#k1">Реле</a>
+    <a href="#adc">ADC</a><a href="#pins">Пины</a><a href="#bom">BOM</a><a href="#chk">Чеклист</a><a href="#safety">Безопасность</a>
+  </nav>
+</header>
+
+<main>
+<h1>Подключаем <span class="grad">CYD ESP32-2432S028</span> к акустике 5.1</h1>
+<p class="lead">Панель управляет питанием трёх усилителей по шине 24 В (реле K1 или MOSFET-ключ),
+ставит mute всем шести входным линиям (реле K2) и снимает сигнал для визуализатора с GPIO 35.
+Источник — ПК с тремя ауксами, громкость живёт в Windows. Переключайте тумблеры — схемы, токи и осциллограф реагируют в реальном времени.</p>
+
+<!-- ============================================================ LAB -->
+<section class="panel" id="lab">
+  <h2><span class="n">◉</span>Интерактивный стенд</h2>
+
+  <div class="controls">
+    <div class="ctl">
+      <button id="sw-pwr" class="pwr" aria-pressed="false" title="Питание усилителей 24 В (GPIO 27)">⏻</button>
+      <div class="ctl-lab">PWR 24 В — реле K1 или MOSFET<br><span class="mono">GPIO 27 · 2N2222 / IRLZ44N</span></div>
+    </div>
+    <div class="ctl">
+      <div class="seg" role="group" aria-label="Mute">
+        <button id="src-bt" class="sel">ЗВУК</button><button id="src-aux">MUTE</button>
+      </div>
+      <div class="ctl-lab">MUTE — реле K2<br><span class="mono">GPIO 16 · 2N2222</span></div>
+    </div>
+    <div class="ctl">
+      <div class="ctl-lab">Пробел — питание, <kbd>1</kbd>/<kbd>2</kbd> — mute<br>
+      <span class="mono" id="lab-hint">клик по узлам схемы — подсказка</span></div>
+    </div>
+  </div>
+
+  <div class="chips">
+    <span class="chip" id="c-g27">GPIO27 <b>LOW</b></span>
+    <span class="chip" id="c-vgs">V<sub>GS</sub> <b>0.0 В</b> · Q1 закрыт</span>
+    <span class="chip" id="c-bus">Шина 24 В <b>0 В</b></span>
+    <span class="chip" id="c-i">Ток <b>0.0 А</b></span>
+    <span class="chip" id="c-g16">GPIO16 <b>LOW</b></span>
+    <span class="chip" id="c-k2">K2 <b>разомкнут · звук</b></span>
+    <span class="chip aud" id="c-mute">Mute <b>выключен</b></span>
+    <span class="chip aud" id="c-adc">GPIO35 <b>≈2048</b></span>
+  </div>
+
+  <!-- ============ панель 1: питание 24 В ============ -->
+  <div class="svgbox">
+    <div class="cap">ЦЕПЬ ПИТАНИЯ · 24 В / 4 А (96 Вт) · реле K1 или ключ Q1 · звезда GND</div>
+    <svg id="sv-power" viewBox="0 0 760 390">
+      <!-- PSU -->
+      <g id="g-psu" class="w24">
+        <rect class="blk" x="20" y="20" width="140" height="80" rx="9"/>
+        <text class="t-h" x="90" y="50" text-anchor="middle">БП 24 В</text>
+        <text class="t-s" x="90" y="70" text-anchor="middle">4 А · 96 Вт</text>
+        <text class="t-m" x="90" y="90" text-anchor="middle" font-size="11">V+ / V−</text>
+      </g>
+      <!-- bus -->
+      <g id="g-bus" class="w24">
+        <path class="wire" d="M160,45 H170"/>
+        <rect class="comp" x="170" y="33" width="36" height="24" rx="4"/>
+        <text class="t-s" x="188" y="25" text-anchor="middle">NTC</text>
+        <path class="wire" d="M206,45 H216"/>
+        <rect class="comp" x="216" y="35" width="28" height="20" rx="3"/>
+        <path class="wire thin" d="M223,35 L229,50 M229,35 L235,50"/>
+        <text class="t-s" x="230" y="25" text-anchor="middle">F1 5 А</text>
+        <path class="wire" d="M244,45 H740"/>
+        <path class="wire flow" d="M244,45 H740"/>
+        <path class="wire" d="M280,45 V100"/><path class="wire" d="M470,45 V100"/><path class="wire" d="M650,45 V100"/>
+        <circle class="nd" cx="280" cy="45" r="3.5"/><circle class="nd" cx="470" cy="45" r="3.5"/>
+        <circle class="nd" cx="650" cy="45" r="3.5"/>
+        <text class="t-h t-live" x="330" y="25">+24 В шина</text>
+        <text class="t-live" id="t-bus" x="736" y="66" text-anchor="end">0 В · выключено</text>
+      </g>
+      <!-- amps -->
+      <g id="amp-f" class="w24">
+        <rect class="blk" x="205" y="100" width="150" height="80" rx="9"/>
+        <text class="t-h" x="280" y="130" text-anchor="middle">AMP-1 · Фронт</text>
+        <text class="t-s" x="280" y="150" text-anchor="middle">стерео 2×30 Вт</text>
+        <text class="t-m" x="280" y="170" text-anchor="middle" font-size="11">FL · FR</text>
+      </g>
+      <g id="amp-r" class="w24">
+        <rect class="blk" x="395" y="100" width="150" height="80" rx="9"/>
+        <text class="t-h" x="470" y="130" text-anchor="middle">AMP-2 · Тыл</text>
+        <text class="t-s" x="470" y="150" text-anchor="middle">стерео 2×30 Вт</text>
+        <text class="t-m" x="470" y="170" text-anchor="middle" font-size="11">RL · RR</text>
+      </g>
+      <g id="amp-c" class="w24">
+        <rect class="blk" x="580" y="100" width="140" height="80" rx="9"/>
+        <text class="t-h" x="650" y="130" text-anchor="middle">AMP-3 · C/SW</text>
+        <text class="t-s" x="650" y="150" text-anchor="middle">центр + саб</text>
+        <text class="t-m" x="650" y="170" text-anchor="middle" font-size="11">C · SUB</text>
+      </g>
+      <!-- V- rail + Q1 -->
+      <g id="g-q1" class="w24">
+        <path class="wire" d="M280,180 V230"/><path class="wire" d="M470,180 V230"/><path class="wire" d="M650,180 V230"/>
+        <path class="wire" d="M280,230 H650"/>
+        <path class="wire flow" d="M280,230 H650"/>
+        <circle class="nd" cx="280" cy="230" r="3.5"/><circle class="nd" cx="470" cy="230" r="3.5"/>
+        <circle class="nd" cx="650" cy="230" r="3.5"/><circle class="nd" cx="375" cy="230" r="3.5"/>
+        <path class="wire" d="M375,230 V250"/>
+        <rect class="blk" x="340" y="250" width="70" height="60" rx="7"/>
+        <text class="t-h" x="375" y="275" text-anchor="middle" font-size="13">Q1</text>
+        <text class="t-m" x="375" y="293" text-anchor="middle" font-size="11">IRLZ44N</text>
+        <path class="wire" d="M375,310 V340"/>
+        <text class="t-s" x="383" y="330">S · исток</text>
+      </g>
+      <!-- gate drive -->
+      <g id="g-gate" class="wctl">
+        <rect class="blk" x="20" y="255" width="80" height="50" rx="9"/>
+        <text class="t-h" x="60" y="277" text-anchor="middle" font-size="13">CYD</text>
+        <text class="t-m" x="60" y="295" text-anchor="middle" font-size="11">GPIO 27</text>
+        <path class="wire" d="M100,280 H130"/>
+        <rect class="comp" x="130" y="272" width="50" height="16" rx="4"/>
+        <text class="t-s" x="155" y="264" text-anchor="middle">R1 150 Ω</text>
+        <path class="wire" d="M180,280 H340"/>
+        <circle class="nd" cx="230" cy="280" r="3.5"/>
+        <rect class="comp" x="222" y="296" width="16" height="40" rx="4"/>
+        <text class="t-s" x="248" y="320">R2 10 кΩ</text>
+        <path class="wire" d="M230,336 V340"/>
+        <text class="t-s" x="196" y="252" text-anchor="middle">затвор</text>
+      </g>
+      <!-- GND star -->
+      <g id="g-star" class="wgnd">
+        <path class="wire" d="M30,340 H740"/>
+        <path class="wire" d="M90,100 V340"/>
+        <text class="t-s" x="98" y="120">V−</text>
+        <circle class="nd" cx="90" cy="340" r="4"/><circle class="nd" cx="230" cy="340" r="4"/>
+        <circle class="nd" cx="375" cy="340" r="4"/>
+        <text class="t-h t-live" x="40" y="372">GND — звезда на клемме БП</text>
+      </g>
+    </svg>
+  </div>
+
+  <!-- ============ панель 2: mute-реле K2 ============ -->
+  <div class="svgbox">
+    <div class="cap">MUTE · реле K2 (GPIO 16) · отвод на АЦП</div>
+    <svg id="sv-src" viewBox="0 0 760 250">
+      <g id="g-bt" class="waud">
+        <rect class="blk" x="20" y="25" width="170" height="55" rx="9"/>
+        <text class="t-h" x="105" y="49" text-anchor="middle">АУДИО ПК 5.1</text>
+        <text class="t-s" x="105" y="68" text-anchor="middle">6 линий: FL, FR, RL, RR, C, SW</text>
+        <path class="wire" d="M190,52 H246"/>
+        <text class="t-m" x="242" y="45" text-anchor="end" font-size="11">ЗВУК</text>
+      </g>
+      <g id="g-aux" class="waud">
+        <rect class="blk" x="20" y="110" width="170" height="55" rx="9"/>
+        <text class="t-h" x="105" y="134" text-anchor="middle">ЗВЕЗДА GND</text>
+        <text class="t-s" x="105" y="153" text-anchor="middle">mute: замыкание на землю</text>
+        <path class="wire" d="M190,137 H246"/>
+        <text class="t-m" x="242" y="130" text-anchor="end" font-size="11">MUTE</text>
+      </g>
+      <g id="g-k1a" class="waud">
+        <circle class="nd" cx="250" cy="52" r="4"/>
+        <circle class="nd" cx="250" cy="137" r="4"/>
+        <circle class="nd" cx="305" cy="95" r="4"/>
+        <line id="arm" x1="305" y1="95" x2="252" y2="135" stroke="#9aa7b8" stroke-width="3.5" stroke-linecap="round"/>
+        <text class="t-s" x="250" y="18" text-anchor="middle">реле K2</text>
+        <path class="wire" d="M305,95 H420"/>
+        <rect class="blk" x="420" y="70" width="60" height="50" rx="8"/>
+        <text class="t-h" x="450" y="95" text-anchor="middle" font-size="13">AMP</text>
+        <text class="t-s" x="450" y="62" text-anchor="middle">усилители</text>
+        <path class="wire" d="M480,95 H750"/>
+        <text class="t-s" x="745" y="86" text-anchor="end">на входы трёх усилителей</text>
+        <circle class="nd" cx="390" cy="95" r="3.5"/>
+        <path class="wire" d="M390,95 V170"/>
+        <text class="t-s" x="400" y="192">отвод на съём → GPIO35 (фронт-левый вход)</text>
+        <text class="t-live" id="t-k1" x="105" y="222">K2: разомкнут · звук идёт</text>
+      </g>
+      <g id="g-k1c" class="wctl">
+        <rect class="coil" x="280" y="155" width="50" height="50" rx="6"/>
+        <text class="t-m" x="305" y="185" text-anchor="middle">K2</text>
+        <text class="t-s" x="305" y="222" text-anchor="middle">катушка 5 В · ключ 2N2222 (GPIO 16)</text>
+      </g>
+    </svg>
+  </div>
+
+  <div id="lab-info"></div>
+
+  <div class="chips" style="margin-top:10px">
+    <span class="chip dim" style="border-style:dashed">Подсказка: красный — 24 В, голубой — аудио, янтарный — управление, серый — GND</span>
+  </div>
+</section>
+
+<!-- ============================================================ 5.1 ARCH -->
+<section class="panel" id="p51">
+  <h2><span class="n">1</span>Архитектура 5.1 — распределение каналов</h2>
+  <p class="lead">Шесть каналов на трёх усилителях, источник — ПК с тремя аналоговыми выходами.
+  CYD не в аудиотракте: он включает питание, держит mute и снимает сигнал для индикатора.</p>
+
+  <div class="svgbox">
+  <svg viewBox="0 0 1000 360">
+    <defs>
+      <marker id="m2-aud" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+        <path d="M0 0 L10 5 L0 10 z" fill="#4cc2ff"/></marker>
+    </defs>
+    <g class="waud">
+      <rect class="blk" x="20" y="40" width="120" height="52" rx="9"/>
+      <text class="t-h" x="80" y="62" text-anchor="middle">ПК · зелёный</text>
+      <text class="t-s" x="80" y="80" text-anchor="middle">FL / FR</text>
+      <rect class="blk" x="20" y="140" width="120" height="52" rx="9"/>
+      <text class="t-h" x="80" y="162" text-anchor="middle">ПК · чёрный, оранжевый</text>
+      <text class="t-s" x="80" y="180" text-anchor="middle">RL / RR, C / SW</text>
+      <path class="wire" d="M140,66 H190 V90 H206"/>
+      <path class="wire" d="M140,166 H190 V130 H206"/>
+      <rect class="coil" x="206" y="85" width="30" height="50" rx="5"/>
+      <text class="t-m" x="221" y="78" text-anchor="middle">K2</text>
+      <path class="wire" d="M236,110 H280" marker-end="url(#m2-aud)"/>
+      <rect class="blk" x="280" y="85" width="90" height="50" rx="9"/>
+      <text class="t-h" x="325" y="106" text-anchor="middle">без РГ</text>
+      <text class="t-s" x="325" y="124" text-anchor="middle">громкость в ПК</text>
+      <path class="wire" d="M370,110 H470"/>
+      <path class="wire" d="M470,45 V260"/>
+      <path class="wire thin" d="M470,60 H556" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M470,131 H556" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M470,202 H556" marker-end="url(#m2-aud)"/>
+      <circle class="nd" cx="470" cy="60" r="3.5"/><circle class="nd" cx="470" cy="131" r="3.5"/><circle class="nd" cx="470" cy="202" r="3.5"/>
+      <rect class="blk" x="556" y="30" width="150" height="60" rx="9"/>
+      <text class="t-h" x="631" y="52" text-anchor="middle">AMP-1 Фронт</text>
+      <text class="t-m" x="631" y="74" text-anchor="middle">2×30 Вт</text>
+      <rect class="blk" x="556" y="101" width="150" height="60" rx="9"/>
+      <text class="t-h" x="631" y="123" text-anchor="middle">AMP-2 Тыл</text>
+      <text class="t-m" x="631" y="145" text-anchor="middle">2×30 Вт</text>
+      <rect class="blk" x="556" y="172" width="150" height="60" rx="9"/>
+      <text class="t-h" x="631" y="194" text-anchor="middle">AMP-3 Центр/Саб</text>
+      <text class="t-m" x="631" y="216" text-anchor="middle">2×30 Вт</text>
+      <path class="wire thin" d="M706,45 H810" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M706,75 L810,105" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M706,116 L810,161" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M706,146 L810,191" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M706,187 L810,247" marker-end="url(#m2-aud)"/>
+      <path class="wire thin" d="M706,217 L810,277" marker-end="url(#m2-aud)"/>
+      <rect class="blk2" x="810" y="28" width="120" height="34" rx="7"/>
+      <text class="t-h" x="870" y="50" text-anchor="middle">FL · фронт Л</text>
+      <rect class="blk2" x="810" y="88" width="120" height="34" rx="7"/>
+      <text class="t-h" x="870" y="110" text-anchor="middle">FR · фронт П</text>
+      <rect class="blk2" x="810" y="144" width="120" height="34" rx="7"/>
+      <text class="t-h" x="870" y="166" text-anchor="middle">RL · тыл Л</text>
+      <rect class="blk2" x="810" y="174" width="120" height="34" rx="7"/>
+      <text class="t-h" x="870" y="196" text-anchor="middle">RR · тыл П</text>
+      <rect class="blk2" x="810" y="230" width="120" height="34" rx="7"/>
+      <text class="t-h" x="870" y="252" text-anchor="middle">C · центр</text>
+      <rect class="blk2" x="810" y="260" width="120" height="34" rx="7"/>
+      <text class="t-h" x="870" y="282" text-anchor="middle">SW · сабвуфер</text>
+    </g>
+    <text class="t-s" x="20" y="345">Питание всех трёх усилителей — общая шина +24 В через K1. GND — звезда на клемме БП.</text>
+  </svg>
+  </div>
+
+  <table>
+    <thead><tr><th>Канал</th><th>Усилитель · джек ПК</th><th>Реально при 24 В / 4 А</th><th>Импеданс</th><th>Примечание</th></tr></thead>
+    <tbody>
+      <tr><td>FL / FR</td><td>AMP-1 · зелёный</td><td>~2×15–18 Вт</td><td class="m">4–8 Ω</td><td>полярность «+» динамика к «+» выхода</td></tr>
+      <tr><td>RL / RR</td><td>AMP-2 · чёрный</td><td>~2×8–10 Вт</td><td class="m">4–8 Ω</td><td>уровень тыла ставят чуть ниже фронта</td></tr>
+      <tr><td>C</td><td>AMP-3, кан. A · оранжевый</td><td>~10–12 Вт</td><td class="m">4–8 Ω</td><td>центр — диалоги</td></tr>
+      <tr><td>SW</td><td>AMP-3, кан. B · оранжевый</td><td>~25–30 Вт</td><td class="m">4 Ω</td><td>саб только 4 Ω, кроссовер на стороне ПК</td></tr>
+    </tbody>
+  </table>
+  <div class="callout info">Средняя громкость — около <b>2.5–3 А</b> по шине 24 В, пики баса доходят до 4–4.5 А:
+  отсюда БП 24 В / 4 А, предохранитель F1 5 А и конденсаторы 3×3300 мкФ у плат плюс 10000 мкФ на шине.</div>
+</section>
+
+<!-- ============================================================ FET 24V -->
+<section class="panel" id="fet">
+  <h2><span class="n">2</span>Силовой ключ 24 В — реле K1 или MOSFET</h2>
+  <p class="lead">N-FET в минусовой цепи (low-side). GPIO 27 открывает затвор через R1, R2 держит затвор
+  на GND, пока пин в Hi-Z (при загрузке ESP32 все GPIO отключены — без R2 ключ «повиснет» в полуоткрытом
+  состоянии). Состояние ключа повторяет тумблер PWR из симулятора.</p>
+
+  <div class="svgbox">
+  <svg viewBox="0 0 780 380">
+    <g id="f-gate" class="wctl">
+      <path class="wire" d="M30,90 H86"/>
+      <rect class="comp" x="86" y="82" width="70" height="16" rx="4"/>
+      <text class="t-s" x="121" y="74" text-anchor="middle">R1 150 Ω</text>
+      <text class="t-m" x="121" y="115" text-anchor="middle" font-size="11">GPIO 27</text>
+      <path class="wire" d="M156,90 H230 V176"/>
+      <circle class="nd" cx="230" cy="90" r="3.5"/>
+      <rect class="comp" x="222" y="176" width="16" height="60" rx="4"/>
+      <text class="t-s" x="248" y="212">R2 10 кΩ</text>
+      <path class="wire" d="M230,236 V300"/>
+    </g>
+    <g id="f-fet" class="w24">
+      <rect class="blk" x="300" y="80" width="170" height="150" rx="10"/>
+      <text class="t-h" x="385" y="110" text-anchor="middle">Q1 · IRLZ44N</text>
+      <text class="t-s" x="385" y="130" text-anchor="middle">N-MOSFET 55 В / 47 А</text>
+      <text class="t-m" x="385" y="155" text-anchor="middle">TO-220 + радиатор</text>
+      <text class="t-s" x="385" y="185" text-anchor="middle" id="f-vgs">V<tspan font-size="9" dy="2">GS</tspan><tspan dy="-2"> 0.0 В · отсечка</tspan></text>
+      <path class="wire" d="M246,130 H300"/>
+      <path class="wire" d="M385,80 V45 H640"/>
+      <path class="wire flow" d="M385,80 V45 H640"/>
+      <path class="wire" d="M385,230 V300"/>
+      <path class="wire flow" d="M385,230 V300"/>
+      <text class="t-s" x="393" y="37">D · сток</text>
+      <text class="t-s" x="393" y="248">S · исток</text>
+    </g>
+    <g id="f-load" class="w24">
+      <path class="wire" d="M640,45 H700 V240 H600"/>
+      <rect class="blk" x="520" y="240" width="160" height="60" rx="9"/>
+      <text class="t-h" x="600" y="263" text-anchor="middle">3× усилитель</text>
+      <text class="t-s" x="600" y="283" text-anchor="middle">V− общий</text>
+      <path class="wire" d="M600,240 V165 H700"/>
+      <text class="t-s" x="610" y="158">V+ ↑ шина</text>
+      <path class="wire" d="M385,45 H30"/>
+      <text class="t-h t-live" x="60" y="35">+24 В</text>
+      <rect class="comp" x="90" y="37" width="60" height="16" rx="4"/>
+      <text class="t-s" x="120" y="72" text-anchor="middle">NTC MF72 / 0.33 Ω 5 Вт</text>
+      <circle class="nd" cx="385" cy="45" r="3.5"/><circle class="nd" cx="700" cy="45" r="3.5"/>
+      <circle class="nd" cx="700" cy="165" r="3.5"/>
+    </g>
+    <g id="f-gnd" class="wgnd">
+      <path class="wire" d="M20,300 H700"/>
+      <circle class="nd" cx="230" cy="300" r="4"/><circle class="nd" cx="385" cy="300" r="4"/>
+      <text class="t-h t-live" x="60" y="330">GND — звезда</text>
+      <text class="t-s" x="700" y="330" text-anchor="end">исток Q1 и R2 — прямо на клемму БП V−</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Почему именно так</h3>
+      <ul class="tight">
+        <li><b>Low-side</b>: исток на GND, затвору нужен лишь 3.3 В относительно GND.</li>
+        <li><b>R1 150 Ω</b> — гасит звон при заряде ёмкости затвора, ограничивает ток пина.</li>
+        <li><b>R2 10 кΩ</b> — гарантирует «выключено» при рестарте платы.</li>
+        <li><b>NTC</b> — режет пусковой ток зарядки конденсаторов усилителей (до 40+ А без него).</li>
+      </ul>
+      <div class="callout warn"><b>Если ключ всё-таки на MOSFET — IRLZ44N при 3.3 В на затворе открыт не полностью:</b>
+      22 мОм паспортные — это при 5 В, при 3.3 В ждите ≈40–60 мОм → на 3–4 А это ~0.5–0.8 Вт тепла.
+      Небольшого радиатора достаточно; но реле K1 на 10 А проще и греется меньше.</div>
+    </div>
+    <div>
+      <h3>Динамика включения (повторяет firmware)</h3>
+      <ul class="tight">
+        <li><span class="mono">CFG_AMP_MUTE_LEAD_MS = 150</span> — перед включением шины вход приглушается;</li>
+        <li><span class="mono">CFG_POWER_ON_DELAY_MS = 120</span> — пауза после выбора источника;</li>
+        <li><span class="mono">CFG_AMP_WARMUP_MS = 1500</span> — усилители выходят на режим без щелчка;</li>
+        <li>при выключении — обратный порядок: mute → снятие 24 В → хвост 250 мс.</li>
+      </ul>
+      <div class="callout ok">Лучший мягкий старт — ШИМ-рампа GPIO 27 0→100 % за 300–500 мс:
+      тогда NTC можно заменить перемычкой.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ RELAY K1 -->
+<section class="panel" id="k1">
+  <h2><span class="n">3</span>Реле: K1 — шина 24 В, K2 — mute</h2>
+  <p class="lead">Ни GPIO 27, ни GPIO 16 не могут тянуть катушку напрямую (лимит пина ~40 мА, катушке нужно 30–70 мА).
+  Транзисторный ключ решает это, а диод 1N4148 гасит выброс самоиндукции катушки.</p>
+
+  <div class="svgbox">
+  <svg viewBox="0 0 780 330">
+    <g id="k-ctl" class="wctl">
+      <path class="wire" d="M30,110 H86"/>
+      <rect class="comp" x="86" y="102" width="60" height="16" rx="4"/>
+      <text class="t-s" x="116" y="94" text-anchor="middle">R3 1 кΩ</text>
+      <text class="t-m" x="116" y="135" text-anchor="middle" font-size="11">GPIO 16</text>
+      <path class="wire" d="M146,110 H206"/>
+      <circle class="nd" cx="206" cy="110" r="3.5"/>
+      <rect class="blk" x="226" y="80" width="120" height="100" rx="10"/>
+      <text class="t-h" x="286" y="110" text-anchor="middle">Q2 · 2N2222</text>
+      <text class="t-s" x="286" y="130" text-anchor="middle">NPN, hFE ≈ 100+</text>
+      <text class="t-m" x="286" y="162" text-anchor="middle">C · B · E</text>
+      <path class="wire" d="M206,110 H226" style="stroke-width:2"/>
+      <path class="wire" d="M286,80 V30 H480"/>
+      <path class="wire" d="M286,180 V260"/>
+    </g>
+    <g id="k-coil" class="wctl">
+      <path class="wire" d="M480,30 V60"/>
+      <rect class="coil" x="445" y="60" width="70" height="34" rx="6"/>
+      <text class="t-m" x="480" y="82" text-anchor="middle">K2 5 В</text>
+      <path class="wire" d="M480,94 V135 H560"/>
+      <text class="t-h t-live" x="566" y="139">на контакты</text>
+      <rect class="comp" x="470" y="102" width="20" height="22" rx="3"/>
+      <path class="wire thin" d="M470,102 L490,124 M490,102 L470,124"/>
+      <text class="t-s" x="452" y="122" text-anchor="end">1N4148</text>
+      <text class="t-s" x="480" y="152" text-anchor="middle">катод к +5 В</text>
+    </g>
+    <g id="k-contacts" class="waud">
+      <rect class="blk" x="560" y="120" width="150" height="120" rx="10"/>
+      <text class="t-h" x="635" y="146" text-anchor="middle">Контакты K2</text>
+      <circle class="nd" cx="600" cy="170" r="4"/><text class="t-m" x="588" y="174" text-anchor="end">NO</text>
+      <circle class="nd" cx="600" cy="195" r="4"/><text class="t-m" x="588" y="199" text-anchor="end">COM</text>
+      <circle class="nd" cx="600" cy="220" r="4"/><text class="t-m" x="588" y="224" text-anchor="end">NC</text>
+      <text class="t-s" x="614" y="174">← аудиолинии от ПК (6 шт)</text>
+      <text class="t-s" x="614" y="199">→ входы трёх усилителей</text>
+      <text class="t-s" x="614" y="224">← звезда GND (mute)</text>
+      <text class="t-live" id="k-state" x="635" y="245">разомкнут · звук идёт</text>
+    </g>
+    <g id="k-gnd" class="wgnd">
+      <path class="wire" d="M20,260 H700"/>
+      <circle class="nd" cx="286" cy="260" r="4"/>
+      <text class="t-h t-live" x="60" y="290">GND</text>
+      <text class="t-s" x="700" y="290" text-anchor="end">GND ключей и аудио — одна звезда</text>
+    </g>
+  </svg>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Расчёт ключа</h3>
+      <table>
+        <tbody>
+          <tr><td>Ток катушки K1 / K2</td><td class="m">30–70 мА</td><td>см. паспорт реле (SRD/HK19F ≈ 70 мА)</td></tr>
+          <tr><td>Базовый ток</td><td class="m">(3.3−0.7)/1к ≈ 2.6 мА</td><td>насыщение с запасом ×27</td></tr>
+          <tr><td>Нагрузка GPIO27 / GPIO16</td><td class="m">2.6 мА</td><td>лимит 40 мА — запас огромный</td></tr>
+          <tr><td>Диод</td><td class="m">1N4148</td><td>параллельно катушке, катод к +5 В</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Поведение при переключении (по firmware)</h3>
+      <ul class="tight">
+        <li><span class="mono">CFG_AMP_MUTE_LEAD_MS = 150</span> — mute встаёт раньше реле питания;</li>
+        <li><span class="mono">CFG_AMP_WARMUP_MS = 1500</span> — усилители выходят на режим, потом снимается mute;</li>
+        <li><span class="mono">CFG_AMP_MUTE_TAIL_MS = 250</span> — хвост тишины после снятия 24 В.</li>
+      </ul>
+      <div class="callout warn">Контакты реле на 10 А (SRD-05VDC, HK19F) спокойно держат <b>24 В / 4 А</b>;
+      параллельно контактам K1 — RC-снаббер 100 нФ + 100 Ω. Сеть 230 В через эти реле не коммутируем.</div>
+      <div class="callout info">GPIO 22 при этом остаётся свободным: ключ для питания тыла+саба, вентилятора
+      или возврата зелёного светодиода делается точно так же, как K1 и K2.</div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ ADC TAP -->
+<section class="panel" id="adc">
+  <h2><span class="n">4</span>Аудио-съём на GPIO 35 — делитель со смещением</h2>
+  <p class="lead">ESP32-ADC читает только 0…3.3 В и не видит минус. Сигнал «поднимают» на середину шкалы:
+  R4/R5 держат узел на 1.65 В, C1 отсекает постоянную составляющую линии, R3 делит размах.
+  Съём — с линии фронт-левого входа прямо у AMP-1: громкость задаёт ПК, поэтому индикатор идёт ровно за музыкой.</p>
+
+  <div class="svgbox">
+  <svg viewBox="0 0 780 310">
+    <g class="waud">
+      <text class="t-s" x="30" y="88">сигнал фронт-левого входа</text>
+      <path class="wire" d="M30,105 H80"/>
+      <rect class="comp" x="80" y="90" width="50" height="30" rx="5"/>
+      <path class="wire thin" d="M84,90 H126 M96,90 H138"/>
+      <text class="t-s" x="105" y="84" text-anchor="middle">C1 100 нФ</text>
+      <path class="wire" d="M130,105 H190"/>
+      <rect class="comp" x="140" y="97" width="46" height="16" rx="4"/>
+      <text class="t-s" x="163" y="90" text-anchor="middle">R3 10 кΩ</text>
+      <circle class="nd" cx="195" cy="105" r="4"/>
+      <path class="wire" d="M195,105 V86"/>
+      <rect class="comp" x="187" y="40" width="16" height="46" rx="4"/>
+      <text class="t-s" x="215" y="64">R4 10 кΩ</text>
+      <path class="wire" d="M195,40 V20 H260"/>
+      <text class="t-h t-live" x="266" y="24">+3.3 В (CYD)</text>
+      <path class="wire" d="M195,105 V150"/>
+      <rect class="comp" x="187" y="150" width="16" height="46" rx="4"/>
+      <text class="t-s" x="215" y="178">R5 10 кΩ</text>
+      <path class="wire" d="M195,196 V245"/>
+      <text class="t-m" x="232" y="122">узел N = 1.65 В</text>
+      <path class="wire" d="M195,105 H400"/>
+      <rect class="blk" x="400" y="70" width="150" height="70" rx="9"/>
+      <text class="t-h" x="475" y="96" text-anchor="middle">CYD</text>
+      <text class="t-m" x="475" y="122" text-anchor="middle">GPIO35 · ADC1_CH7</text>
+      <text class="t-s" x="558" y="90">0…3.3 В,</text>
+      <text class="t-s" x="558" y="106">input-only!</text>
+    </g>
+    <g class="wgnd">
+      <path class="wire" d="M20,245 H700"/>
+      <circle class="nd" cx="195" cy="245" r="4"/>
+      <text class="t-h t-live" x="60" y="275">GND</text>
+      <text class="t-s" x="700" y="275" text-anchor="end">GND съёма = GND аудиотракта (звезда)</text>
+    </g>
+  </svg>
+  </div>
+
+  <h3>Осциллограф узла N — текущее значение на GPIO 35</h3>
+  <div class="svgbox">
+    <div class="scope-lab"><span>3.3 В ─</span><span>1.65 В (смещение)</span><span>0 В ─</span></div>
+    <canvas id="scope" width="1200" height="190" style="width:100%;height:auto;display:block"></canvas>
+    <div class="scope-lab"><span id="sc-adc">GPIO35 ≈ 2048</span><span id="sc-note">ADC1 · 12 бит · 0–4095</span></div>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <h3>Номиналы и логика</h3>
+      <table>
+        <tbody>
+          <tr><td>C1 100 нФ</td><td>плёнка / X7R</td><td>разделительный, срез ≈ 1 Гц</td></tr>
+          <tr><td>R3 10 кΩ</td><td>последовательно после C1</td><td>вместе с R5 делит сигнал ×⅓</td></tr>
+          <tr><td>R4 = R5 10 кΩ</td><td>3.3 В → узел → GND</td><td>смещение 1.65 В (Тевенин 5 кΩ)</td></tr>
+          <tr><td>итог</td><td class="m">1 В RMS → ±0.33 В</td><td>влезает в шкалу ADC с запасом</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <h3>Грабли</h3>
+      <ul class="tight">
+        <li>GPIO35 — <b>input-only, ADC1</b>. ADC2 занят Wi-Fi — и не нужен: 35-й в ADC1.</li>
+        <li>Провод съёма — экранированный, экран на GND у CYD, иначе фон 50 Гц в спектре.</li>
+        <li>В полной тишине ADC ≈ 2048. Ушёл — проверяйте делитель и GND.</li>
+        <li>Землю съёма берите с точки звезды, не с минуса конкретного усилителя.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ PINS -->
+<section class="panel" id="pins">
+  <h2><span class="n">5</span>Распиновка CYD — чем мы располагаем</h2>
+  <p class="lead">Почти всё на плате занято: дисплей, тач, SD-карта, RGB-светодиод и UART.
+  Свободны фактически три (27, 22, 35), а четвёртый — зелёный пин светодиода: его заняло mute-реле.</p>
+
+  <h3>Свободные и используемые нами</h3>
+  <table>
+    <thead><tr><th>GPIO</th><th>Направление</th><th>Функция</th><th>Куда</th><th>Примечание</th></tr></thead>
+    <tbody>
+      <tr><td><span class="pintag pfree">GPIO 27</span></td><td>выход</td><td>Шина 24 В (K1)</td><td class="m">1 кΩ → 2N2222 → катушка</td><td>единственный свободный силовой выход на P3/CN1</td></tr>
+      <tr><td><span class="pintag pfree">GPIO 16</span></td><td>выход</td><td>Mute (K2)</td><td class="m">1 кΩ → 2N2222 → катушка</td><td>пин зелёного светодиода; светодиод без зелёного</td></tr>
+      <tr><td><span class="pintag pfree">GPIO 22</span></td><td>выход</td><td>Свободный ключ</td><td class="m">тыл+саб / вентилятор / RGB</td><td>прошивкой пока не переключается, тест обвязки его видит; в сборке <span class="mono">cyd_enc</span> пин отдан энкодеру</td></tr>
+      <tr><td><span class="pintag padc">GPIO 35</span></td><td>вход (ADC1_CH7)</td><td>Аудио-съём</td><td class="m">узел N делителя</td><td>input-only, подтяжек нет — держится смещением; в <span class="mono">cyd_enc</span> — вход энкодера (10 кΩ к 3V3)</td></tr>
+      <tr><td><span class="pintag ppwm">GPIO 21</span></td><td>выход (PWM)</td><td>Подсветка экрана</td><td class="m">LEDC CH7 5 кГц</td><td>занята платой — не трогать</td></tr>
+      <tr><td><span class="pintag pfree">GPIO 0</span></td><td>вход</td><td>Кнопка BOOT</td><td class="m">опц. кнопка PWR</td><td>CFG_PIN_POWER_BTN, свободна после загрузки</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Занятые платой (из firmware/include/config.h)</h3>
+  <table>
+    <thead><tr><th>Блок</th><th>GPIO</th><th>Заметка</th></tr></thead>
+    <tbody>
+      <tr><td>Дисплей SPI</td><td class="m">2, 12, 13, 14, 15</td><td>ST7789 320×240, поворот 1 = landscape</td></tr>
+      <tr><td>Тач XPT2046</td><td class="m">25, 32, 33, 39</td><td>свой SPI, GPIO 25 = SCLK (он же DAC1 — беречь)</td></tr>
+      <tr><td>SD-карта</td><td class="m">5, 18, 19, 23</td><td>VSPI</td></tr>
+      <tr><td>RGB LED</td><td class="m">4, 16, 17</td><td>общий анод; GPIO 16 заняло mute-реле — светодиод без зелёного</td></tr>
+      <tr><td>UART</td><td class="m">1 (TX), 3 (RX)</td><td>лог / прошивка</td></tr>
+      <tr><td>DAC (BT-вариант)</td><td class="m">26</td><td>в варианте A не используется</td></tr>
+      <tr><td>Входы только</td><td class="m">34, 36, 39</td><td>запас на будущее (36/39 — тоже ADC1)</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout info"><b>Разъём P3/CN1</b> — 2×7…2×8 контактов, шаг 2.54 мм. На него выведены все три наших
+  пина (27, 22, 35) плюс питание 5 В / 3.3 В / GND и EN. Нумерация контактов у ревизий CYD отличается —
+  сверьтесь с шёлком и прозвоните каждый пин мультиметром <b>до</b> пайки.</div>
+
+  <h3>Громкость: панель — это BLE-клавиатура ПК</h3>
+  <p>Громкость живёт в Windows (ПК подаёт сигнал на входы плат аналоговыми джеками), поэтому
+  панель сопрягается с ПК как Bluetooth LE-HID и жмёт те же медиа-клавиши, что мультимедийная
+  клавиатура: <span class="mono">Volume Increment / Decrement / Mute</span>. <b>Распаивать нечего</b> —
+  это радио внутри ESP32. На экране за это отвечают три чипа <span class="mono">-</span> /
+  <span class="mono">MUTE</span> / <span class="mono">+</span> и полоса <span class="mono">PC VOL</span>:
+  вести пальцем по полосе = крутить (тач-энкодер), одно нажатие = одна клавиша.</p>
+  <table>
+    <thead><tr><th>Сборка</th><th>Что занимает</th><th>Чем платим</th></tr></thead>
+    <tbody>
+      <tr><td><span class="mono">cyd</span> (по умолчанию)</td><td class="m">ничего</td><td>ничем: управление только тачем</td></tr>
+      <tr><td><span class="mono">cyd_enc</span></td><td class="m">GPIO 22 + GPIO 35 + 2 × 10 кΩ подтяжки</td><td>свободным ключом и аудио-съёмом (§4) — спектра в такой панели нет</td></tr>
+      <tr><td><span class="mono">cyd_bt</span></td><td class="m">—</td><td>громкостью ПК: A2DP забирает Bluetooth-контроллер, крутить надо с ПК</td></tr>
+    </tbody>
+  </table>
+  <div class="callout warn">На сопряжение панель рекламируется как <b>Amp panel keys</b> — добавьте её
+  в «Параметры → Bluetooth и другие устройства». PIN не потребуется: ни экрана, ни клавиатуры
+  для его ввода у устройства нет.</div>
+</section>
+
+<!-- ============================================================ BOM -->
+<section class="panel" id="bom">
+  <h2><span class="n">6</span>Компоненты — что купить / найти</h2>
+  <table>
+    <thead><tr><th>Позиция</th><th>Номинал / тип</th><th>Кол-во</th><th>Роль</th><th>Примечание</th></tr></thead>
+    <tbody>
+      <tr><td>Плата CYD</td><td class="m">ESP32-2432S028</td><td>1</td><td>управление + UI</td><td>уже есть :)</td></tr>
+      <tr><td>Блок питания</td><td class="m">24 В / 4 А (96 Вт)</td><td>1</td><td>питание трёх плат</td><td>закрытый; ёмкость на шине обязательна</td></tr>
+      <tr><td>Электролиты</td><td class="m">3300 мкФ ×3 + 10000 мкФ, 35 В</td><td>4</td><td>пики баса вместо БП</td><td>не экономьте: 4 А сами пики не отдадут</td></tr>
+      <tr><td>Усилители</td><td class="m">3× стерео, 24 В</td><td>3</td><td>зелёный / чёрный / оранжевый джек</td><td>проверьте чип: PAM8610/TDA7377 не терпят 24 В</td></tr>
+      <tr><td>Реле</td><td class="m">5 В, 10 А (HK19F / SRD)</td><td>2</td><td>K1 — шина 24 В, K2 — mute</td><td>контакты держат 24 В / 4 А</td></tr>
+      <tr><td>Транзистор</td><td class="m">2N2222 / BC337</td><td>2</td><td>ключи катушек K1 и K2</td><td>NPN TO-92</td></tr>
+      <tr><td>Диод</td><td class="m">1N4148</td><td>2 × 2</td><td>защита от ЭДС катушек + снаббер</td><td>катод к +5 В</td></tr>
+      <tr><td>MOSFET</td><td class="m">IRLZ44N (опция)</td><td>1</td><td>ключ 24 В, если не на реле</td><td>именно IRL (logic-level), не IRF; нужен радиатор</td></tr>
+      <tr><td>Резисторы</td><td class="m">1 кΩ ×2 · 10 кΩ ×3 · 100 Ω</td><td>набор</td><td>базы ключей, делитель, снаббер</td><td>0.25 Вт достаточно</td></tr>
+      <tr><td>NTC / резистор</td><td class="m">MF72 10D-9 или 0.33 Ω 5 Вт</td><td>1</td><td>мягкий старт 24 В</td><td>или ШИМ-рампа в прошивке</td></tr>
+      <tr><td>Конденсаторы</td><td class="m">100 нФ</td><td>2</td><td>разделительный на съёме и снаббер K1</td><td>плёнка / X7R</td></tr>
+      <tr><td>Предохранитель</td><td class="m">5 А + держатель</td><td>1</td><td>на выходе БП</td><td>обязательно</td></tr>
+      <tr><td>DC-DC</td><td class="m">24 → 5 В, 2–3 А</td><td>1</td><td>CYD, катушки, (MAX98357A)</td><td>катушки от 5 В-пина CYD не питать</td></tr>
+      <tr><td>Клеммники</td><td class="m">шаг 5.0 мм</td><td>4–6</td><td>шина 24 В, GND, выходы</td><td>+ наконечники НШВИ</td></tr>
+      <tr><td>Провода силовые</td><td class="m">1.5–2.5 мм²</td><td>~3 м</td><td>24 В и GND</td><td>красный / чёрный</td></tr>
+      <tr><td>Провод аудио</td><td class="m">экранированный</td><td>~1 м</td><td>съём на GPIO35</td><td>экран на GND у CYD</td></tr>
+      <tr><td>Кабели от ПК</td><td class="m">3.5 мм стерео, экранированные</td><td>3</td><td>зелёный / чёрный / оранжевый → платы</td><td>панель их только слушает через делитель</td></tr>
+      <tr><td>MAX98357A</td><td class="m">I2S, моно 3.2 Вт</td><td>опция</td><td>внутренний динамик диагностики</td><td>требует три вывода I2S — см. docs/wiring.md §10</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ CHECKLIST -->
+<section class="panel" id="chk">
+  <h2><span class="n">7</span>Чеклист сборки</h2>
+  <p class="lead">Отмечайте этапы — прогресс сохраняется в этом браузере. Правило одно:
+  <b>сначала всё прозвонить, потом подать 24 В.</b></p>
+  <div class="bar"><i id="chk-bar"></i></div>
+  <div class="bar-lab" id="chk-lab">0 / 0 · 0 %</div>
+  <div id="chk-list" style="margin-top:12px"></div>
+</section>
+
+<!-- ============================================================ SAFETY -->
+<section class="panel" id="safety">
+  <h2><span class="n">8</span>Безопасность</h2>
+  <div class="callout warn">Сетевые 230 В есть только внутри БП — его корпус открывать не нужно и не надо.
+  Всё остальное в сборке — 5, 24 В и аудио.</div>
+  <ul class="tight">
+    <li><b>Первое включение 24 В</b> — без усилителей: напряжение на шине, нагрев ключа, ток покоя; потом по одной плате.</li>
+    <li><b>Предохранитель 5 А</b> ставится сразу на выходе БП, до любых разветвлений.</li>
+    <li><b>Полярность 24 В</b> проверьте дважды до подачи — переполюсовка убивает усилители мгновенно.</li>
+    <li><b>Выходы плат мостовые:</b> минус динамика нельзя соединять ни с землёй, ни с минусом другого канала.</li>
+    <li><b>Тепло в печатном корпусе:</b> три платы плюс ключ — нужны щели; при 15–20 Вт рассеивания добавьте вентилятор.</li>
+    <li><b>Конденсаторы усилителей</b> держат заряд и после выключения — разряжайте резистором перед пайкой.</li>
+    <li><b>Звезда GND</b>: все минусы — в одну точку на клемме БП. Иначе — фоны, гулы, «земляные» петли.</li>
+    <li>Аудио-землю не вести петлёй вокруг силовых проводов 24 В — наводки в спектр гарантированы.</li>
+    <li>Все соединения — клеммники или пайка+термоусадка. Скрутки под изолентой = будущий поиск глюков.</li>
+  </ul>
+</section>
+
+<footer>CYD ESP32-2432S028 → 5.1 · интерактивный гайд · GPIO 27 (шина 24 В) · GPIO 16 (mute) · GPIO 22 (свободный ключ / энкодер) · GPIO 35 (ADC1_CH7 / энкодер) · громкость ПК по BT-HID без проводов</footer>
+
+<script>
+(function(){
+'use strict';
+var $=function(id){return document.getElementById(id)};
+var st={pwr:false,src:'bt'};
+var AMP_I=[1.2,0.9,1.7], AMP_N=['amp-f','amp-r','amp-c'];
+
+function set(id,cond){
+  var e=$(id); if(!e) return;
+  e.classList.toggle('on',!!cond);
+}
+
+function armTo(bt){
+  var arm=$('arm'); if(!arm) return;
+  arm.style.transformBox='view-box';
+  arm.style.transformOrigin='305px 95px';
+  arm.style.transform= bt?'rotate(75deg)':'rotate(0deg)';
+}
+
+function chip(id,html,cls){var e=$(id); if(!e)return; e.innerHTML=html; if(cls)e.className=cls;}
+
+function render(){
+  var on=st.pwr, bt=st.src==='bt';
+  set('g-psu',on); set('g-bus',on); set('g-q1',on); set('g-gate',on); set('g-star',on);
+  for(var i=0;i<AMP_N.length;i++) set(AMP_N[i],on);
+  set('g-bt',bt); set('g-aux',!bt);
+  set('g-k1c',bt); set('g-k1a',true);
+  armTo(bt);
+  set('f-gate',on); set('f-fet',on); set('f-load',on);
+
+  chip('c-g27','GPIO27 <b>'+(on?'HIGH':'LOW')+'</b>', 'chip'+(on?' hot':''));
+  chip('c-vgs','V<sub>GS</sub> <b>'+(on?'3.3 В':'0.0 В')+'</b> · '+(on?'Q1 открыт':'Q1 закрыт'), 'chip'+(on?' on':''));
+  chip('c-bus','Шина 24 В <b>'+(on?'24.0 В':'0 В')+'</b>', 'chip'+(on?' hot':''));
+  var iT=on?AMP_I[0]+AMP_I[1]+AMP_I[2]:0;
+  chip('c-i','Ток <b>'+iT.toFixed(1)+' А</b>', 'chip'+(on?' hot':''));
+  chip('c-g16','GPIO16 <b>'+(bt?'LOW':'HIGH')+'</b>', 'chip'+(bt?' on':''));
+  chip('c-k2','K2 <b>'+(bt?'разомкнут · звук':'замкнут · mute')+'</b>', 'chip'+(bt?' on':''));
+  chip('c-mute','Mute <b>'+(bt?'выключен':'включён')+'</b>', 'chip aud');
+  chip('c-adc','GPIO35 <b>≈'+adcNow()+'</b>', 'chip aud');
+
+  var tb=$('t-bus'); if(tb) tb.textContent= on?'24.0 В · '+iT.toFixed(1)+' А':'0 В · выключено';
+  var tk=$('t-k1'); if(tk) tk.textContent= 'K2: '+(bt?'разомкнут · звук идёт':'замкнут · mute');
+  var ks=$('k-state'); if(ks) ks.textContent= bt?'разомкнут · звук идёт':'замкнут · mute';
+  var fv=$('f-vgs');
+  if(fv){
+    var p=on?iT*iT*0.05:0;
+    fv.innerHTML= on? 'V<tspan font-size="9" dy="2">GS</tspan><tspan dy="-2"> 3.3 В · P≈'+p.toFixed(1)+' Вт тепла в ключе</tspan>'
+                    : 'V<tspan font-size="9" dy="2">GS</tspan><tspan dy="-2"> 0.0 В · отсечка</tspan>';
+  }
+}
+
+/* ---------- scope ---------- */
+var cv=$('scope'), cx=cv?cv.getContext('2d'):null, t0=Date.now();
+function ampNow(t){
+  if(!cx) return 0;
+  return 0.30+0.14*Math.sin(t*0.0011)+0.10*Math.sin(t*0.00047+1.3);
+}
+function adcNow(){
+  if(!cx) return 2048;
+  var t=Date.now()-t0;
+  var v=1.65+ampNow(t)*Math.sin(t*0.004);
+  return Math.max(0,Math.min(4095,Math.round(v/3.3*4095)));
+}
+function draw(){
+  if(!cx) return;
+  var t=Date.now()-t0, W=cv.width, H=cv.height, mid=H*0.5;
+  cx.clearRect(0,0,W,H);
+  cx.strokeStyle='#1a212b'; cx.lineWidth=1;
+  [0.5,0.825,1.65,2.475,3.3].forEach(function(v){
+    var y=H-(v/3.3)*H;
+    cx.beginPath(); cx.moveTo(0,y); cx.lineTo(W,y); cx.stroke();
+  });
+  cx.fillStyle='#3a4656'; cx.font='11px ui-monospace,monospace';
+  cx.fillText('3.3 В',4,12); cx.fillText('1.65 В',4,H/2-4); cx.fillText('0 В',4,H-4);
+  cx.strokeStyle='#2a4a5a'; cx.setLineDash([5,6]);
+  cx.beginPath(); cx.moveTo(0,mid); cx.lineTo(W,mid); cx.stroke(); cx.setLineDash([]);
+  var A=st.pwr?ampNow(t):0.06;
+  cx.strokeStyle='#4cc2ff'; cx.lineWidth=2.2; cx.beginPath();
+  for(var x=0;x<=W;x+=2){
+    var ph=x/W*Math.PI*6+t*0.004;
+    var v=1.65+A*Math.sin(ph);
+    var y=H-(v/3.3)*H;
+    if(x===0)cx.moveTo(x,y); else cx.lineTo(x,y);
+  }
+  cx.stroke(); cx.lineWidth=1;
+  var a=adcNow();
+  var sa=$('sc-adc'); if(sa) sa.textContent='GPIO35 ≈ '+a+'  ('+(a/4095*3.3).toFixed(2)+' В)';
+  chip('c-adc','GPIO35 <b>≈'+a+'</b>', 'chip aud');
+}
+setInterval(draw,40); draw();
+
+/* ---------- controls ---------- */
+function bind(id,fn){var e=$(id); if(e) e.addEventListener('click',fn);}
+bind('sw-pwr',function(){st.pwr=!st.pwr; this.classList.toggle('on',st.pwr); this.setAttribute('aria-pressed',st.pwr); render();});
+bind('src-bt',function(){st.src='bt'; syncSeg(); render();});
+bind('src-aux',function(){st.src='aux'; syncSeg(); render();});
+function syncSeg(){
+  var b=$('src-bt'),a=$('src-aux');
+  if(b)b.classList.toggle('sel',st.src==='bt');
+  if(a)a.classList.toggle('sel',st.src==='aux');
+}
+document.addEventListener('keydown',function(e){
+  if(e.target&&(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA'))return;
+  if(e.code==='Space'){e.preventDefault(); $('sw-pwr').click();}
+  if(e.key==='1'){$('src-bt').click();}
+  if(e.key==='2'){$('src-aux').click();}
+});
+
+/* ---------- click-to-explain ---------- */
+var INFO={
+ 'g-psu':'<b>БП 24 В / 4 А.</b> Это 96 Вт на шесть каналов: средняя громкость 2.5–3 А, пики баса вытягивают конденсаторы. CYD питается от отдельного DC-DC 24→5 В, не от 24 В напрямую.',
+ 'g-bus':'<b>Шина +24 В.</b> NTC MF72 ограничивает пусковой ток (три платы заряжают свои ёмкости), F1 5 А защищает от КЗ. Красным подсвечивается при включённом PWR.',
+ 'amp-f':'<b>AMP-1 · Фронт.</b> Вход — зелёный джек ПК, выход — FL и FR. Паспорт платы 2×30 Вт, реально ~2×15–18 Вт. Питание с общей шины 24 В.',
+ 'amp-r':'<b>AMP-2 · Тыл.</b> Вход — чёрный джек ПК, выход — RL и RR. Уровень тыла в Windows ставят на 2–3 дБ ниже фронта.',
+ 'amp-c':'<b>AMP-3 · Центр + Саб.</b> Вход — оранжевый джек ПК: tip → центр, ring → саб. Саб берите 4 Ω, кроссовер — на стороне ПК.',
+ 'g-q1':'<b>Силовой ключ.</b> В этой сборке шину 24 В держит реле K1 на 10 А; MOSFET (IRLZ44N в минусовой цепи) — альтернатива, если реле нет.',
+ 'g-gate':'<b>Цепь ключа.</b> GPIO 27 → 1 кΩ → база транзистора катушки K1; второй такой же ключ висит на GPIO 16 и щёлкает mute (K2).',
+ 'g-star':'<b>Звезда GND.</b> Все минусы сходятся в одну точку на клемме БП: усилители, CYD, аудио, ключи.',
+ 'g-bt':'<b>Аудио ПК 5.1.</b> Три отдельных кабеля 3.5 мм идут прямо на входы плат — реле в звуковом тракте нет. Громкость — в Windows.',
+ 'g-aux':'<b>Звезда GND.</b> Отсюда берёт землю mute: при срабатывании K2 все шесть горячих входных линий замыкаются на эту точку — щелчка нет.',
+ 'g-k1a':'<b>Контакты K2 и аудиотракт.</b> COM → входы трёх усилителей, NO — рабочий ход (звук идёт), NC — mute (замыкание на землю). Отвод на съём — с фронт-левого входа.',
+ 'g-k1c':'<b>Катушка K2.</b> 5 В, ток 30–70 мА, управляется транзистором 2N2222 с GPIO 16 (см. раздел 3).'
+};
+Object.keys(INFO).forEach(function(id){
+  var e=$(id); if(!e) return;
+  e.style.cursor='pointer';
+  e.addEventListener('click',function(){
+    var box=$('lab-info');
+    box.innerHTML=INFO[id];
+    box.style.display='block';
+  });
+});
+
+/* ---------- checklist ---------- */
+var TASKS=[
+ ['Корпус: разметить и закрепить клеммники, БП, три платы; щели для вентиляции','корпус'],
+ ['Звезда GND: один узел на клемме БП для минусов и аудиоземли ПК','монтаж'],
+ ['Ключи реле: 2× (1 кΩ в базу, 2N2222, 1N4148), K1 — шина, K2 — mute','пайка'],
+ ['NTC и предохранитель F1 5 А в +24 В, электролиты 3×3300 мкФ + 10000 мкФ','безопасность'],
+ ['Mute K2: шесть горячих входных линий на контакт, COM → звезда GND','пайка'],
+ ['Делитель ADC: 10 кΩ последовательно, 10 кΩ → GND, 10 кΩ → 3V3, 100 нФ → GPIO35','пайка'],
+ ['Аудио: зелёный → AMP-1, чёрный → AMP-2, оранжевый → AMP-3, без РГ','монтаж'],
+ ['Прозвонить всё мультиметром до подачи 24 В (КЗ, диоды, делитель)','проверка'],
+ ['Прошивка: pio run -e cyd -t upload, в логе строки bus / mute relay / spare key и pc volume','прошивка'],
+ ['Сопрячь панель «Amp panel keys» с ПК; на экране диагностики — pc keys LINKED','проверка'],
+ ['Громкость Windows с панели: чипы − / MUTE / + и полоса PC VOL','проверка'],
+ ['(только cyd_enc) Энкодер на 22/35 с подтяжками 10 кΩ: щелчок = один шаг громкости','пайка'],
+ ['Первое включение без усилителей, потом по одной плате: 24.0 В, ключ холодный','проверка'],
+ ['Windows: конфигурация 5.1 и тест каждого канала по одному','проверка'],
+ ['Тумблер на экране: щелчок K1, шина поднимается, mute снимается, звук пошёл','проверка'],
+ ['В тишине GPIO35 ≈ 2048, визуализатор пляшет от музыки','проверка'],
+ ['Убрать временные провода, термоусадка, финальная укладка','корпус']
+];
+var KEY='cyd51chk';
+function loadChk(){try{return JSON.parse(localStorage.getItem(KEY))||[]}catch(e){return []}}
+function saveChk(v){try{localStorage.setItem(KEY,JSON.stringify(v))}catch(e){}}
+function buildChk(){
+  var list=$('chk-list'), done=loadChk(), html='';
+  TASKS.forEach(function(t,i){
+    html+='<label class="chk'+(done.indexOf(i)>=0?' done':'')+'"><input type="checkbox" data-i="'+i+'"'+(done.indexOf(i)>=0?' checked':'')+'><span class="txt"><b>'+t[0]+'</b></span><span class="tag">'+t[1]+'</span></label>';
+  });
+  list.innerHTML=html;
+  list.querySelectorAll('input').forEach(function(cb){
+    cb.addEventListener('change',function(){
+      var d=loadChk(), i=+this.dataset.i;
+      if(this.checked){ if(d.indexOf(i)<0)d.push(i); } else { d=d.filter(function(x){return x!==i}); }
+      saveChk(d);
+      this.closest('.chk').classList.toggle('done',this.checked);
+      updBar();
+    });
+  });
+  updBar();
+}
+function updBar(){
+  var done=loadChk().length, n=TASKS.length, p=Math.round(done/n*100);
+  $('chk-bar').style.width=p+'%';
+  $('chk-lab').textContent=done+' / '+n+' · '+p+'%'+(p===100?' · готово 🎉':'');
+}
+buildChk();
+
+render();
+})();
+</script>
+</body>
+</html>
